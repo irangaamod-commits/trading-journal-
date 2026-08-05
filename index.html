@@ -3,307 +3,586 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Journal & Analytics</title>
+    <title>Trading Journal</title>
     <style>
         :root {
-            --bg-color: #121824;
-            --card-bg: #1e2738;
-            --accent-color: #3b82f6;
-            --text-color: #f3f4f6;
-            --text-muted: #9ca3af;
-            --win-color: #10b981;
-            --loss-color: #ef4444;
-            --border-color: #374151;
+            --bg-dark: #0b0f17;
+            --card-bg: #131b26;
+            --card-border: #1e293b;
+            --accent-gold: #f59e0b;
+            --green-profit: #10b981;
+            --red-loss: #ef4444;
+            --text-main: #ffffff;
+            --text-sub: #64748b;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            padding: 15px;
-            max-width: 800px;
-            margin: 0 auto;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding-bottom: 70px;
         }
 
-        h1, h2 {
-            margin-bottom: 15px;
+        /* Header */
+        .header {
+            padding: 20px 20px 10px 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-top: 2px;
+        }
+
+        /* Container Pages */
+        .page {
+            display: none;
+            padding: 0 20px;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Dashboard Styles */
+        .total-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 12px;
+        }
+
+        .total-card .label {
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            color: var(--text-sub);
             font-weight: 600;
         }
 
-        .stats-grid {
+        .total-card .val {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--green-profit);
+            margin-top: 8px;
+        }
+
+        .grid-2 {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
         }
 
-        @media (min-width: 600px) {
-            .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
+        .sub-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
         }
 
-        .stat-card {
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
+        .sub-card .label {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 8px;
         }
 
-        .stat-label {
+        .sub-card .val {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .val-gold { color: var(--accent-gold); }
+        .val-green { color: var(--green-profit); }
+        .val-red { color: var(--red-loss); }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .empty-box {
+            border: 1px dashed var(--card-border);
+            border-radius: 16px;
+            padding: 30px 20px;
+            text-align: center;
+            color: var(--text-sub);
+            font-size: 13px;
+        }
+
+        /* Calendar Styles */
+        .cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .cal-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .month-total {
+            text-align: center;
+            font-size: 13px;
+            color: var(--green-profit);
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 12px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 5px;
+            font-weight: 500;
+            position: relative;
         }
 
-        .stat-value {
-            font-size: 20px;
-            font-weight: bold;
+        .day-cell.today {
+            border-color: var(--accent-gold);
         }
 
-        .text-win { color: var(--win-color); }
-        .text-loss { color: var(--loss-color); }
+        .day-cell.profit {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-color: var(--green-profit);
+            color: var(--green-profit);
+        }
 
-        .form-container, .table-container {
+        .day-cell.loss {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: var(--red-loss);
+            color: var(--red-loss);
+        }
+
+        .cal-legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Floating Button */
+        .fab {
+            position: fixed;
+            bottom: 85px;
+            right: 20px;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background-color: var(--accent-gold);
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 65px;
+            background-color: var(--bg-dark);
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-sub);
+            font-size: 11px;
+            text-decoration: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--accent-gold);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+        }
+
+        /* Modal Overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            align-items: flex-end;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-content {
             background: var(--card-bg);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 20px;
+            border-top: 1px solid var(--card-border);
+            width: 100%;
+            border-radius: 20px 20px 0 0;
+            padding: 25px 20px;
         }
 
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-        }
-
-        @media (min-width: 600px) {
-            .form-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+        .modal-title {
+            font-size: 18px;
+            margin-bottom: 15px;
         }
 
         .form-group {
-            display: flex;
-            flex-direction: column;
+            margin-bottom: 12px;
         }
 
-        label {
-            font-size: 12px;
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-sub);
             margin-bottom: 5px;
-            color: var(--text-muted);
         }
 
-        input, select {
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            padding: 10px;
-            border-radius: 5px;
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--bg-dark);
+            border: 1px solid var(--card-border);
+            color: #fff;
             outline: none;
         }
 
-        button {
-            background: var(--accent-color);
-            color: white;
-            border: none;
+        .btn-submit {
+            width: 100%;
             padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            width: 100%;
-        }
-
-        button:active {
-            opacity: 0.9;
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 14px;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            color: var(--text-muted);
-            font-weight: normal;
-        }
-
-        .delete-btn {
-            background: transparent;
-            color: var(--loss-color);
+            background: var(--accent-gold);
             border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 700;
+            margin-top: 10px;
             cursor: pointer;
-            font-weight: bold;
-            padding: 0;
-            width: auto;
-            margin: 0;
+        }
+
+        .trade-item {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
     </style>
 </head>
 <body>
 
-    <h1>Trading Journal</h1>
+    <div class="header">
+        <h1>Trading Journal</h1>
+        <p>XAUUSD · Forex — track every setup, honestly</p>
+    </div>
 
-    <!-- Analytics Cards -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">Total Trades</div>
-            <div class="stat-value" id="total-trades">0</div>
+    <!-- DASHBOARD PAGE -->
+    <div id="dashboard-page" class="page active">
+        <div class="total-card">
+            <div class="label">TOTAL P&L</div>
+            <div class="val" id="total-pnl">$0.00</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Win Rate</div>
-            <div class="stat-value" id="win-rate">0%</div>
+
+        <div class="grid-2">
+            <div class="sub-card">
+                <div class="label">Win Rate</div>
+                <div class="val val-gold" id="win-rate">0%</div>
+            </div>
+            <div class="sub-card">
+                <div class="label">Total Trades</div>
+                <div class="val" id="total-trades">0</div>
+            </div>
+            <div class="sub-card">
+                <div class="label">Best Trade</div>
+                <div class="val val-green" id="best-trade">$0.00</div>
+            </div>
+            <div class="sub-card">
+                <div class="label">Worst Trade</div>
+                <div class="val val-red" id="worst-trade">$0.00</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Net P&L ($)</div>
-            <div class="stat-value" id="net-pnl">$0.00</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Profit Factor</div>
-            <div class="stat-value" id="profit-factor">0.00</div>
+
+        <div class="section-title">Recent Trades</div>
+        <div id="trades-container">
+            <div class="empty-box">
+                No trades yet. Tap + to log your first setup.
+            </div>
         </div>
     </div>
 
-    <!-- Trade Entry Form -->
-    <div class="form-container">
-        <h2>Add Trade</h2>
-        <form id="trade-form">
-            <div class="form-grid">
+    <!-- CALENDAR PAGE -->
+    <div id="calendar-page" class="page">
+        <div class="cal-header">
+            <button onclick="changeMonth(-1)" style="background:none; border:none; color:#fff;">&lt;</button>
+            <div class="cal-title" id="cal-month-year">August 2026</div>
+            <button onclick="changeMonth(1)" style="background:none; border:none; color:#fff;">&gt;</button>
+        </div>
+        <div class="month-total" id="month-total">Month total: $0.00</div>
+
+        <div class="weekdays">
+            <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+        </div>
+
+        <div class="days-grid" id="calendar-days">
+            <!-- Calendar Cells Generated by JS -->
+        </div>
+
+        <div class="cal-legend">
+            <div class="legend-item"><div class="dot" style="background: var(--green-profit)"></div> Profit day</div>
+            <div class="legend-item"><div class="dot" style="background: var(--red-loss)"></div> Loss day</div>
+            <div class="legend-item"><div class="dot" style="background: var(--card-border)"></div> No trades</div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="openModal()">+</button>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <button class="nav-item active" id="nav-dash" onclick="switchPage('dashboard')">
+            <span class="nav-icon">⊞</span>
+            <span>Dashboard</span>
+        </button>
+        <button class="nav-item" id="nav-cal" onclick="switchPage('calendar')">
+            <span class="nav-icon">📅</span>
+            <span>Calendar</span>
+        </button>
+    </div>
+
+    <!-- Trade Entry Modal -->
+    <div class="modal" id="trade-modal">
+        <div class="modal-content">
+            <div class="modal-title">Log Trade Setup</div>
+            <form id="trade-form">
                 <div class="form-group">
-                    <label for="pair">Asset / Pair</label>
-                    <input type="text" id="pair" placeholder="e.g. XAUUSD / BTCUSD" required>
+                    <label>Pair</label>
+                    <input type="text" id="pair" value="XAUUSD" required>
                 </div>
                 <div class="form-group">
-                    <label for="type">Type</label>
-                    <select id="type">
-                        <option value="BUY">BUY</option>
-                        <option value="SELL">SELL</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="pnl">P&L ($)</label>
+                    <label>P&L Amount ($)</label>
                     <input type="number" step="0.01" id="pnl" placeholder="e.g. 50 or -30" required>
                 </div>
-            </div>
-            <button type="submit">Save Trade</button>
-        </form>
-    </div>
-
-    <!-- Trades Table -->
-    <div class="table-container">
-        <h2>Trade History</h2>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Pair</th>
-                        <th>Type</th>
-                        <th>P&L ($)</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="trades-list">
-                    <!-- Dynamic Rows -->
-                </tbody>
-            </table>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="trade-date" required>
+                </div>
+                <button type="submit" class="btn-submit">Save Setup</button>
+            </form>
         </div>
     </div>
 
     <script>
-        let trades = JSON.parse(localStorage.getItem('trading_journal_trades')) || [];
+        let trades = JSON.parse(localStorage.getItem('trading_journal_data')) || [];
+        let currentDate = new Date();
 
-        const form = document.getElementById('trade-form');
-        const tradesList = document.getElementById('trades-list');
+        document.getElementById('trade-date').valueAsDate = new Date();
 
-        function updateUI() {
-            tradesList.innerHTML = '';
-            
-            let totalWinPnl = 0;
-            let totalLossPnl = 0;
-            let wins = 0;
-            let losses = 0;
-            let netPnl = 0;
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-            trades.forEach((trade, index) => {
-                const pnl = parseFloat(trade.pnl);
-                netPnl += pnl;
-
-                if (pnl > 0) {
-                    totalWinPnl += pnl;
-                    wins++;
-                } else if (pnl < 0) {
-                    totalLossPnl += Math.abs(pnl);
-                    losses++;
-                }
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${trade.date}</td>
-                    <td>${trade.pair}</td>
-                    <td style="color: ${trade.type === 'BUY' ? 'var(--win-color)' : 'var(--loss-color)'}">${trade.type}</td>
-                    <td class="${pnl >= 0 ? 'text-win' : 'text-loss'}">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</td>
-                    <td><button class="delete-btn" onclick="deleteTrade(${index})">X</button></td>
-                `;
-                tradesList.appendChild(row);
-            });
-
-            const totalTrades = trades.length;
-            const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : 0;
-            const profitFactor = totalLossPnl > 0 ? (totalWinPnl / totalLossPnl).toFixed(2) : (totalWinPnl > 0 ? 'INF' : '0.00');
-
-            document.getElementById('total-trades').innerText = totalTrades;
-            document.getElementById('win-rate').innerText = `${winRate}%`;
-            
-            const netPnlElem = document.getElementById('net-pnl');
-            netPnlElem.innerText = `${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)}`;
-            netPnlElem.className = `stat-value ${netPnl >= 0 ? 'text-win' : 'text-loss'}`;
-            
-            document.getElementById('profit-factor').innerText = profitFactor;
-
-            localStorage.setItem('trading_journal_trades', JSON.stringify(trades));
+            if(page === 'dashboard') {
+                document.getElementById('dashboard-page').classList.add('active');
+                document.getElementById('nav-dash').classList.add('active');
+            } else {
+                document.getElementById('calendar-page').classList.add('active');
+                document.getElementById('nav-cal').classList.add('active');
+                renderCalendar();
+            }
         }
 
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const pair = document.getElementById('pair').value.toUpperCase();
-            const type = document.getElementById('type').value;
-            const pnl = parseFloat(document.getElementById('pnl').value);
-            const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        function openModal() {
+            document.getElementById('trade-modal').classList.add('open');
+        }
 
-            trades.unshift({ pair, type, pnl, date });
-            updateUI();
-
-            form.reset();
+        document.getElementById('trade-modal').addEventListener('click', (e) => {
+            if(e.target === document.getElementById('trade-modal')) {
+                document.getElementById('trade-modal').classList.remove('open');
+            }
         });
 
-        function deleteTrade(index) {
-            trades.splice(index, 1);
-            updateUI();
+        document.getElementById('trade-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const pair = document.getElementById('pair').value;
+            const pnl = parseFloat(document.getElementById('pnl').value);
+            const date = document.getElementById('trade-date').value;
+
+            trades.push({ pair, pnl, date });
+            localStorage.setItem('trading_journal_data', JSON.stringify(trades));
+
+            document.getElementById('trade-modal').classList.remove('open');
+            document.getElementById('pnl').value = '';
+
+            updateDashboard();
+            renderCalendar();
+        });
+
+        function updateDashboard() {
+            let totalPnl = 0;
+            let wins = 0;
+            let best = 0;
+            let worst = 0;
+
+            trades.forEach(t => {
+                totalPnl += t.pnl;
+                if(t.pnl > 0) wins++;
+                if(t.pnl > best) best = t.pnl;
+                if(t.pnl < worst) worst = t.pnl;
+            });
+
+            const winRate = trades.length ? Math.round((wins / trades.length) * 100) : 0;
+
+            const pnlElem = document.getElementById('total-pnl');
+            pnlElem.innerText = `${totalPnl >= 0 ? '$' : '-$'}${Math.abs(totalPnl).toFixed(2)}`;
+            pnlElem.style.color = totalPnl >= 0 ? 'var(--green-profit)' : 'var(--red-loss)';
+
+            document.getElementById('win-rate').innerText = `${winRate}%`;
+            document.getElementById('total-trades').innerText = trades.length;
+            document.getElementById('best-trade').innerText = `$${best.toFixed(2)}`;
+            document.getElementById('worst-trade').innerText = `$${Math.abs(worst).toFixed(2)}`;
+
+            const container = document.getElementById('trades-container');
+            if(trades.length === 0) {
+                container.innerHTML = `<div class="empty-box">No trades yet. Tap + to log your first setup.</div>`;
+            } else {
+                container.innerHTML = trades.slice().reverse().map(t => `
+                    <div class="trade-item">
+                        <div>
+                            <div style="font-weight:600">${t.pair}</div>
+                            <div style="font-size:11px; color:var(--text-sub)">${t.date}</div>
+                        </div>
+                        <div style="font-weight:700; color: ${t.pnl >= 0 ? 'var(--green-profit)' : 'var(--red-loss)'}">
+                            ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}
+                        </div>
+                    </div>
+                `).join('');
+            }
         }
 
-        updateUI();
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('cal-month-year').innerText = `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            const daysGrid = document.getElementById('calendar-days');
+            daysGrid.innerHTML = '';
+
+            for(let i = 0; i < firstDay; i++) {
+                daysGrid.innerHTML += `<div></div>`;
+            }
+
+            let monthTotalPnl = 0;
+
+            for(let day = 1; day <= totalDays; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTrades = trades.filter(t => t.date === dateStr);
+                
+                let dayPnl = 0;
+                dayTrades.forEach(t => dayPnl += t.pnl);
+                monthTotalPnl += dayPnl;
+
+                let statusClass = '';
+                if(dayTrades.length > 0) {
+                    statusClass = dayPnl >= 0 ? 'profit' : 'loss';
+                }
+
+                const todayStr = new Date().toISOString().split('T')[0];
+                if(dateStr === todayStr) statusClass += ' today';
+
+                daysGrid.innerHTML += `
+                    <div class="day-cell ${statusClass}">
+                        ${day}
+                    </div>
+                `;
+            }
+
+            const monthElem = document.getElementById('month-total');
+            monthElem.innerText = `Month total: ${monthTotalPnl >= 0 ? '$' : '-$'}${Math.abs(monthTotalPnl).toFixed(2)}`;
+            monthElem.style.color = monthTotalPnl >= 0 ? 'var(--green-profit)' : 'var(--red-loss)';
+        }
+
+        function changeMonth(dir) {
+            currentDate.setMonth(currentDate.getMonth() + dir);
+            renderCalendar();
+        }
+
+        updateDashboard();
     </script>
 </body>
 </html>
