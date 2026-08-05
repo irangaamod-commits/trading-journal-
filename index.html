@@ -1,674 +1,309 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trading Journal</title>
-  
-  <!-- React & ReactDOM -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  
-  <!-- Babel for JSX -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Recharts & Lucide Icons -->
-  <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
-  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-  <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Journal & Analytics</title>
+    <style>
+        :root {
+            --bg-color: #121824;
+            --card-bg: #1e2738;
+            --accent-color: #3b82f6;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --win-color: #10b981;
+            --loss-color: #ef4444;
+            --border-color: #374151;
+        }
 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-    * { box-sizing: border-box; }
-    ::-webkit-scrollbar { display: none; }
-    body { margin: 0; background-color: #0A0E13; }
-  </style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 15px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1, h2 {
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 600px) {
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .text-win { color: var(--win-color); }
+        .text-loss { color: var(--loss-color); }
+
+        .form-container, .table-container {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        @media (min-width: 600px) {
+            .form-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+        }
+
+        input, select {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        button {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        button:active {
+            opacity: 0.9;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        .delete-btn {
+            background: transparent;
+            color: var(--loss-color);
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 0;
+            width: auto;
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
-  <div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
-    const { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } = Recharts;
-    const { 
-      Plus, X, TrendingUp, TrendingDown, Calendar: CalendarIcon, 
-      LayoutDashboard, ChevronLeft, ChevronRight, Trash2, Target 
-    } = lucideReact;
+    <h1>Trading Journal</h1>
 
-    const C = {
-      bg: "#0A0E13",
-      surface: "#12181F",
-      surface2: "#1A222B",
-      border: "#232E38",
-      gold: "#C9A24B",
-      goldSoft: "#E6C878",
-      green: "#3ECF8E",
-      greenSoft: "rgba(62,207,142,0.16)",
-      red: "#FF6B6B",
-      redSoft: "rgba(255,107,107,0.16)",
-      text: "#E7EDF3",
-      muted: "#7C8A97",
-      faint: "#3A4552",
-    };
-
-    const DISPLAY_FONT = "'Space Grotesk', sans-serif";
-    const BODY_FONT = "'Inter', sans-serif";
-
-    const PAIRS = ["XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "GBPJPY", "US30", "NAS100", "Other"];
-    const SETUPS = ["ICT (Liquidity + MSS)", "RSI Div + Fib Confluence", "Other"];
-
-    function fmtMoney(n) {
-      const sign = n < 0 ? "-" : "";
-      return `${sign}$${Math.abs(n).toFixed(2)}`;
-    }
-    function todayISO() {
-      return new Date().toISOString().slice(0, 10);
-    }
-    function monthLabel(d) {
-      return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    }
-
-    function App() {
-      const [trades, setTrades] = useState([]);
-      const [loaded, setLoaded] = useState(false);
-      const [tab, setTab] = useState("dashboard");
-      const [showAdd, setShowAdd] = useState(false);
-      const [viewMonth, setViewMonth] = useState(() => {
-        const d = new Date();
-        return new Date(d.getFullYear(), d.getMonth(), 1);
-      });
-      const [dayModal, setDayModal] = useState(null);
-
-      // standard browser localStorage භාවිත කර සකස් කර ඇත
-      useEffect(() => {
-        try {
-          const saved = localStorage.getItem("trading_journal_trades");
-          if (saved) setTrades(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to load trades", e);
-        }
-        setLoaded(true);
-      }, []);
-
-      async function persist(next) {
-        setTrades(next);
-        try {
-          localStorage.setItem("trading_journal_trades", JSON.stringify(next));
-        } catch (e) {
-          console.error("Save failed", e);
-        }
-      }
-
-      async function addTrade(trade) {
-        const next = [...trades, { ...trade, id: `t_${Date.now()}` }];
-        next.sort((a, b) => (a.date < b.date ? -1 : 1));
-        await persist(next);
-        setShowAdd(false);
-      }
-
-      async function deleteTrade(id) {
-        await persist(trades.filter((t) => t.id !== id));
-      }
-
-      if (!loaded) {
-        return (
-          <div style={{ background: C.bg, height: "100vh" }} className="flex items-center justify-center">
-            <div style={{ color: C.gold, fontFamily: DISPLAY_FONT }} className="text-sm tracking-widest animate-pulse">
-              LOADING JOURNAL…
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div style={{ background: C.bg, fontFamily: BODY_FONT, color: C.text }} className="min-h-screen flex items-start justify-center">
-          <div
-            style={{
-              width: "100%",
-              maxWidth: 430,
-              minHeight: "100vh",
-              background: C.bg,
-              borderLeft: `1px solid ${C.border}`,
-              borderRight: `1px solid ${C.border}`,
-              position: "relative",
-            }}
-          >
-            <Header />
-
-            <div style={{ paddingBottom: 96 }}>
-              {tab === "dashboard" && <Dashboard trades={trades} onDelete={deleteTrade} />}
-              {tab === "calendar" && (
-                <CalendarView
-                  trades={trades}
-                  viewMonth={viewMonth}
-                  setViewMonth={setViewMonth}
-                  onDayClick={(d) => setDayModal(d)}
-                />
-              )}
-            </div>
-
-            <button
-              onClick={() => setShowAdd(true)}
-              style={{
-                position: "fixed",
-                bottom: 85,
-                transform: "translateX(160px)",
-                width: 56,
-                height: 56,
-                borderRadius: 999,
-                background: C.gold,
-                boxShadow: "0 6px 20px rgba(201,162,75,0.35)",
-                zIndex: 40
-              }}
-              className="flex items-center justify-center active:scale-95 transition-transform"
-            >
-              <Plus size={26} color={C.bg} strokeWidth={2.5} />
-            </button>
-
-            <div
-              style={{
-                position: "fixed",
-                bottom: 0,
-                width: "100%",
-                maxWidth: 430,
-                height: 76,
-                background: C.surface,
-                borderTop: `1px solid ${C.border}`,
-                zIndex: 40
-              }}
-              className="flex items-center justify-around px-6"
-            >
-              <NavButton
-                active={tab === "dashboard"}
-                icon={<LayoutDashboard size={20} />}
-                label="Dashboard"
-                onClick={() => setTab("dashboard")}
-              />
-              <NavButton
-                active={tab === "calendar"}
-                icon={<CalendarIcon size={20} />}
-                label="Calendar"
-                onClick={() => setTab("calendar")}
-              />
-            </div>
-
-            {showAdd && <AddTradeModal onClose={() => setShowAdd(false)} onSave={addTrade} />}
-            {dayModal && (
-              <DayModal
-                date={dayModal}
-                trades={trades.filter((t) => t.date === dayModal)}
-                onClose={() => setDayModal(null)}
-                onDelete={deleteTrade}
-              />
-            )}
-          </div>
+    <!-- Analytics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Trades</div>
+            <div class="stat-value" id="total-trades">0</div>
         </div>
-      );
-    }
-
-    function Header() {
-      return (
-        <div style={{ padding: "22px 20px 16px", borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ fontFamily: DISPLAY_FONT, fontSize: 22, fontWeight: 700, letterSpacing: 0.2 }}>
-            Trading Journal
-          </div>
-          <div style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>
-            XAUUSD · Forex — track every setup, honestly
-          </div>
+        <div class="stat-card">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value" id="win-rate">0%</div>
         </div>
-      );
-    }
-
-    function NavButton({ active, icon, label, onClick }) {
-      return (
-        <button onClick={onClick} className="flex flex-col items-center gap-1 py-2 px-3">
-          <div style={{ color: active ? C.gold : C.muted }}>{icon}</div>
-          <div style={{ color: active ? C.gold : C.muted, fontSize: 11, fontWeight: 600 }}>{label}</div>
-        </button>
-      );
-    }
-
-    function Dashboard({ trades, onDelete }) {
-      const stats = useMemo(() => computeStats(trades), [trades]);
-      const equityData = useMemo(() => {
-        let cum = 0;
-        return [...trades]
-          .sort((a, b) => (a.date < b.date ? -1 : 1))
-          .map((t) => {
-            cum += Number(t.pnl);
-            return { date: t.date.slice(5), pnl: Number(cum.toFixed(2)) };
-          });
-      }, [trades]);
-
-      const recent = [...trades].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
-
-      return (
-        <div className="px-5 pt-5">
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18 }}>
-            <div style={{ color: C.muted, fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>TOTAL P&L</div>
-            <div
-              style={{
-                fontFamily: DISPLAY_FONT,
-                fontSize: 34,
-                fontWeight: 700,
-                marginTop: 4,
-                color: stats.totalPnl >= 0 ? C.green : C.red,
-              }}
-            >
-              {fmtMoney(stats.totalPnl)}
-            </div>
-            {equityData.length > 1 && (
-              <div style={{ height: 90, marginTop: 8, marginLeft: -12 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={equityData}>
-                    <XAxis dataKey="date" hide />
-                    <YAxis hide domain={["dataMin", "dataMax"]} />
-                    <Tooltip
-                      contentStyle={{ background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ color: C.muted }}
-                      itemStyle={{ color: C.gold }}
-                    />
-                    <Line type="monotone" dataKey="pnl" stroke={C.gold} strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <StatCard label="Win Rate" value={`${stats.winRate}%`} accent={C.gold} />
-            <StatCard label="Total Trades" value={stats.count} accent={C.text} />
-            <StatCard label="Best Trade" value={fmtMoney(stats.best)} accent={C.green} />
-            <StatCard label="Worst Trade" value={fmtMoney(stats.worst)} accent={C.red} />
-          </div>
-
-          <div className="mt-6">
-            <div style={{ fontFamily: DISPLAY_FONT, fontSize: 15, fontWeight: 600 }} className="mb-3">
-              Recent Trades
-            </div>
-            {recent.length === 0 && <EmptyState text="No trades yet. Tap + to log your first setup." />}
-            <div className="flex flex-col gap-2">
-              {recent.map((t) => (
-                <TradeRow key={t.id} trade={t} onDelete={onDelete} />
-              ))}
-            </div>
-          </div>
+        <div class="stat-card">
+            <div class="stat-label">Net P&L ($)</div>
+            <div class="stat-value" id="net-pnl">$0.00</div>
         </div>
-      );
-    }
-
-    function StatCard({ label, value, accent }) {
-      return (
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14 }}>
-          <div style={{ color: C.muted, fontSize: 11, fontWeight: 600, letterSpacing: 0.4 }}>{label}</div>
-          <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: accent, marginTop: 4 }}>
-            {value}
-          </div>
+        <div class="stat-card">
+            <div class="stat-label">Profit Factor</div>
+            <div class="stat-value" id="profit-factor">0.00</div>
         </div>
-      );
-    }
+    </div>
 
-    function TradeRow({ trade, onDelete }) {
-      const win = Number(trade.pnl) >= 0;
-      return (
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12 }} className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: win ? C.greenSoft : C.redSoft }} className="flex items-center justify-center">
-              {win ? <TrendingUp size={16} color={C.green} /> : <TrendingDown size={16} color={C.red} />}
-            </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{trade.pair} · {trade.direction}</div>
-              <div style={{ fontSize: 11, color: C.muted }}>{trade.date} {trade.setup ? `· ${trade.setup.split(" ")[0]}` : ""}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div style={{ fontFamily: DISPLAY_FONT, fontWeight: 700, fontSize: 14, color: win ? C.green : C.red }}>
-              {fmtMoney(Number(trade.pnl))}
-            </div>
-            <button onClick={() => onDelete(trade.id)}>
-              <Trash2 size={14} color={C.faint} />
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    function EmptyState({ text }) {
-      return (
-        <div style={{ border: `1px dashed ${C.border}`, borderRadius: 14, padding: "24px 16px", color: C.muted, fontSize: 13, textAlign: "center" }}>
-          {text}
-        </div>
-      );
-    }
-
-    function computeStats(trades) {
-      const count = trades.length;
-      const totalPnl = trades.reduce((s, t) => s + Number(t.pnl), 0);
-      const wins = trades.filter((t) => Number(t.pnl) > 0);
-      const winRate = count ? Math.round((wins.length / count) * 100) : 0;
-      const pnls = trades.map((t) => Number(t.pnl));
-      const best = pnls.length ? Math.max(...pnls) : 0;
-      const worst = pnls.length ? Math.min(...pnls) : 0;
-      return { count, totalPnl, winRate, best, worst };
-    }
-
-    function CalendarView({ trades, viewMonth, setViewMonth, onDayClick }) {
-      const byDay = useMemo(() => {
-        const map = {};
-        trades.forEach((t) => {
-          if (!map[t.date]) map[t.date] = [];
-          map[t.date].push(t);
-        });
-        return map;
-      }, [trades]);
-
-      const maxAbs = useMemo(() => {
-        let m = 0;
-        Object.values(byDay).forEach((arr) => {
-          const sum = arr.reduce((s, t) => s + Number(t.pnl), 0);
-          if (Math.abs(sum) > m) m = Math.abs(sum);
-        });
-        return m || 1;
-      }, [byDay]);
-
-      const year = viewMonth.getFullYear();
-      const month = viewMonth.getMonth();
-      const firstDay = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-      const cells = [];
-      for (let i = 0; i < firstDay; i++) cells.push(null);
-      for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
-      const monthPnl = Object.entries(byDay)
-        .filter(([date]) => date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`))
-        .reduce((s, [, arr]) => s + arr.reduce((s2, t) => s2 + Number(t.pnl), 0), 0);
-
-      return (
-        <div className="px-5 pt-5">
-          <div className="flex items-center justify-between mb-1">
-            <button onClick={() => setViewMonth(new Date(year, month - 1, 1))}>
-              <ChevronLeft size={20} color={C.muted} />
-            </button>
-            <div style={{ fontFamily: DISPLAY_FONT, fontWeight: 700, fontSize: 16 }}>{monthLabel(viewMonth)}</div>
-            <button onClick={() => setViewMonth(new Date(year, month + 1, 1))}>
-              <ChevronRight size={20} color={C.muted} />
-            </button>
-          </div>
-          <div style={{ textAlign: "center", color: monthPnl >= 0 ? C.green : C.red, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-            Month total: {fmtMoney(monthPnl)}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1.5 mb-2">
-            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-              <div key={d} style={{ textAlign: "center", color: C.muted, fontSize: 11, fontWeight: 600 }}>{d}</div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1.5">
-            {cells.map((d, i) => {
-              if (!d) return <div key={i} />;
-              const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-              const dayTrades = byDay[dateStr];
-              const sum = dayTrades ? dayTrades.reduce((s, t) => s + Number(t.pnl), 0) : 0;
-              const intensity = dayTrades ? Math.min(0.9, 0.25 + (Math.abs(sum) / maxAbs) * 0.65) : 0;
-              const bg = !dayTrades
-                ? C.surface
-                : sum >= 0
-                ? `rgba(62,207,142,${intensity})`
-                : `rgba(255,107,107,${intensity})`;
-              const isToday = dateStr === todayISO();
-              return (
-                <button
-                  key={i}
-                  onClick={() => dayTrades && onDayClick(dateStr)}
-                  style={{
-                    aspectRatio: "1",
-                    borderRadius: 9,
-                    background: bg,
-                    border: isToday ? `1.5px solid ${C.gold}` : `1px solid ${C.border}`,
-                  }}
-                  className="flex flex-col items-center justify-center"
-                >
-                  <div style={{ fontSize: 11, fontWeight: 600, color: dayTrades ? C.text : C.muted }}>{d}</div>
-                  {dayTrades && (
-                    <div style={{ fontSize: 8, fontWeight: 700, color: sum >= 0 ? "#0F3E28" : "#4A0E0E", marginTop: 1 }}>
-                      {sum >= 0 ? "+" : ""}{sum >= 100 || sum <= -100 ? Math.round(sum) : sum.toFixed(0)}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-4 mt-5 justify-center">
-            <Legend color="rgba(62,207,142,0.65)" label="Profit day" />
-            <Legend color="rgba(255,107,107,0.65)" label="Loss day" />
-            <Legend color={C.surface} label="No trades" border />
-          </div>
-        </div>
-      );
-    }
-
-    function Legend({ color, label, border }) {
-      return (
-        <div className="flex items-center gap-1.5">
-          <div style={{ width: 10, height: 10, borderRadius: 3, background: color, border: border ? `1px solid ${C.border}` : "none" }} />
-          <div style={{ fontSize: 10.5, color: C.muted }}>{label}</div>
-        </div>
-      );
-    }
-
-    function DayModal({ date, trades, onClose, onDelete }) {
-      const sum = trades.reduce((s, t) => s + Number(t.pnl), 0);
-      return (
-        <ModalShell onClose={onClose}>
-          <div className="flex items-center justify-between mb-1">
-            <div style={{ fontFamily: DISPLAY_FONT, fontSize: 16, fontWeight: 700 }}>{date}</div>
-            <div style={{ color: sum >= 0 ? C.green : C.red, fontWeight: 700 }}>{fmtMoney(sum)}</div>
-          </div>
-          <div className="flex flex-col gap-2 mt-3">
-            {trades.map((t) => (
-              <TradeRow key={t.id} trade={t} onDelete={onDelete} />
-            ))}
-            {trades.map((t) =>
-              t.notes ? (
-                <div key={t.id + "n"} style={{ fontSize: 12, color: C.muted, padding: "0 4px" }}>
-                  <span style={{ color: C.gold }}>{t.pair} note: </span>{t.notes}
+    <!-- Trade Entry Form -->
+    <div class="form-container">
+        <h2>Add Trade</h2>
+        <form id="trade-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="pair">Asset / Pair</label>
+                    <input type="text" id="pair" placeholder="e.g. XAUUSD / BTCUSD" required>
                 </div>
-              ) : null
-            )}
-          </div>
-        </ModalShell>
-      );
-    }
+                <div class="form-group">
+                    <label for="type">Type</label>
+                    <select id="type">
+                        <option value="BUY">BUY</option>
+                        <option value="SELL">SELL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pnl">P&L ($)</label>
+                    <input type="number" step="0.01" id="pnl" placeholder="e.g. 50 or -30" required>
+                </div>
+            </div>
+            <button type="submit">Save Trade</button>
+        </form>
+    </div>
 
-    function AddTradeModal({ onClose, onSave }) {
-      const [date, setDate] = useState(todayISO());
-      const [pair, setPair] = useState("XAUUSD");
-      const [customPair, setCustomPair] = useState("");
-      const [direction, setDirection] = useState("Buy");
-      const [entry, setEntry] = useState("");
-      const [exit, setExit] = useState("");
-      const [pnl, setPnl] = useState("");
-      const [rr, setRr] = useState("");
-      const [setup, setSetup] = useState(SETUPS[0]);
-      const [notes, setNotes] = useState("");
-      const [error, setError] = useState("");
+    <!-- Trades Table -->
+    <div class="table-container">
+        <h2>Trade History</h2>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Pair</th>
+                        <th>Type</th>
+                        <th>P&L ($)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="trades-list">
+                    <!-- Dynamic Rows -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-      function handleSave() {
-        if (!date || pnl === "") {
-          setError("Date saha P&L ekak danna one.");
-          return;
+    <script>
+        let trades = JSON.parse(localStorage.getItem('trading_journal_trades')) || [];
+
+        const form = document.getElementById('trade-form');
+        const tradesList = document.getElementById('trades-list');
+
+        function updateUI() {
+            tradesList.innerHTML = '';
+            
+            let totalWinPnl = 0;
+            let totalLossPnl = 0;
+            let wins = 0;
+            let losses = 0;
+            let netPnl = 0;
+
+            trades.forEach((trade, index) => {
+                const pnl = parseFloat(trade.pnl);
+                netPnl += pnl;
+
+                if (pnl > 0) {
+                    totalWinPnl += pnl;
+                    wins++;
+                } else if (pnl < 0) {
+                    totalLossPnl += Math.abs(pnl);
+                    losses++;
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${trade.date}</td>
+                    <td>${trade.pair}</td>
+                    <td style="color: ${trade.type === 'BUY' ? 'var(--win-color)' : 'var(--loss-color)'}">${trade.type}</td>
+                    <td class="${pnl >= 0 ? 'text-win' : 'text-loss'}">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</td>
+                    <td><button class="delete-btn" onclick="deleteTrade(${index})">X</button></td>
+                `;
+                tradesList.appendChild(row);
+            });
+
+            const totalTrades = trades.length;
+            const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : 0;
+            const profitFactor = totalLossPnl > 0 ? (totalWinPnl / totalLossPnl).toFixed(2) : (totalWinPnl > 0 ? 'INF' : '0.00');
+
+            document.getElementById('total-trades').innerText = totalTrades;
+            document.getElementById('win-rate').innerText = `${winRate}%`;
+            
+            const netPnlElem = document.getElementById('net-pnl');
+            netPnlElem.innerText = `${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)}`;
+            netPnlElem.className = `stat-value ${netPnl >= 0 ? 'text-win' : 'text-loss'}`;
+            
+            document.getElementById('profit-factor').innerText = profitFactor;
+
+            localStorage.setItem('trading_journal_trades', JSON.stringify(trades));
         }
-        onSave({
-          date,
-          pair: pair === "Other" ? (customPair || "Other") : pair,
-          direction,
-          entry,
-          exit,
-          pnl: Number(pnl),
-          rr,
-          setup,
-          notes,
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const pair = document.getElementById('pair').value.toUpperCase();
+            const type = document.getElementById('type').value;
+            const pnl = parseFloat(document.getElementById('pnl').value);
+            const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+            trades.unshift({ pair, type, pnl, date });
+            updateUI();
+
+            form.reset();
         });
-      }
 
-      return (
-        <ModalShell onClose={onClose} tall>
-          <div style={{ fontFamily: DISPLAY_FONT, fontSize: 17, fontWeight: 700 }} className="mb-4">
-            Log a Trade
-          </div>
+        function deleteTrade(index) {
+            trades.splice(index, 1);
+            updateUI();
+        }
 
-          <Field label="Date">
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} />
-          </Field>
-
-          <Field label="Pair">
-            <select value={pair} onChange={(e) => setPair(e.target.value)} style={inputStyle}>
-              {PAIRS.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            {pair === "Other" && (
-              <input
-                placeholder="Pair name"
-                value={customPair}
-                onChange={(e) => setCustomPair(e.target.value)}
-                style={{ ...inputStyle, marginTop: 8 }}
-              />
-            )}
-          </Field>
-
-          <Field label="Direction">
-            <div className="flex gap-2">
-              {["Buy", "Sell"].map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDirection(d)}
-                  style={{
-                    flex: 1, padding: "10px 0", borderRadius: 10,
-                    background: direction === d ? (d === "Buy" ? C.greenSoft : C.redSoft) : C.surface2,
-                    border: `1px solid ${direction === d ? (d === "Buy" ? C.green : C.red) : C.border}`,
-                    color: direction === d ? (d === "Buy" ? C.green : C.red) : C.muted,
-                    fontWeight: 600, fontSize: 13,
-                  }}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Entry price">
-              <input value={entry} onChange={(e) => setEntry(e.target.value)} style={inputStyle} placeholder="4041.00" />
-            </Field>
-            <Field label="Exit price">
-              <input value={exit} onChange={(e) => setExit(e.target.value)} style={inputStyle} placeholder="4028.50" />
-            </Field>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="P&L ($)">
-              <input value={pnl} onChange={(e) => setPnl(e.target.value)} style={inputStyle} placeholder="e.g. 125 or -60" />
-            </Field>
-            <Field label="R:R (optional)">
-              <input value={rr} onChange={(e) => setRr(e.target.value)} style={inputStyle} placeholder="e.g. 2.5" />
-            </Field>
-          </div>
-
-          <Field label="Setup">
-            <select value={setup} onChange={(e) => setSetup(e.target.value)} style={inputStyle}>
-              {SETUPS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </Field>
-
-          <Field label="Notes">
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              style={{ ...inputStyle, height: 70, resize: "none" }}
-              placeholder="MSS confirm, liquidity sweep before entry..."
-            />
-          </Field>
-
-          {error && <div style={{ color: C.red, fontSize: 12, marginBottom: 8 }}>{error}</div>}
-
-          <button
-            onClick={handleSave}
-            style={{
-              width: "100%", padding: "13px 0", borderRadius: 12,
-              background: C.gold, color: C.bg, fontWeight: 700, fontSize: 14,
-              marginTop: 6,
-            }}
-            className="flex items-center justify-center gap-2"
-          >
-            <Target size={16} /> Save Trade
-          </button>
-        </ModalShell>
-      );
-    }
-
-    function Field({ label, children }) {
-      return (
-        <div className="mb-3">
-          <div style={{ fontSize: 11.5, color: C.muted, fontWeight: 600, marginBottom: 5 }}>{label}</div>
-          {children}
-        </div>
-      );
-    }
-
-    const inputStyle = {
-      width: "100%",
-      background: C.surface2,
-      border: `1px solid ${C.border}`,
-      borderRadius: 10,
-      padding: "10px 12px",
-      color: C.text,
-      fontSize: 13.5,
-      fontFamily: BODY_FONT,
-      outline: "none",
-    };
-
-    function ModalShell({ children, onClose, tall }) {
-      return (
-        <div
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
-            display: "flex", alignItems: "flex-end", justifyCenter: "center", zIndex: 50,
-          }}
-          onClick={onClose}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "100%",
-              maxWidth: 430,
-              margin: "0 auto",
-              maxHeight: tall ? "88%" : "60%",
-              overflowY: "auto",
-              background: C.surface,
-              borderTop: `1px solid ${C.border}`,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: "16px 20px 28px",
-            }}
-          >
-            <div className="flex justify-end mb-1">
-              <button onClick={onClose}>
-                <X size={18} color={C.muted} />
-              </button>
-            </div>
-            {children}
-          </div>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
-  </script>
+        updateUI();
+    </script>
 </body>
 </html>
-
