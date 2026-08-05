@@ -60,12 +60,45 @@
         }
 
         /* Dashboard Styles */
+        .capital-container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .capital-container label {
+            font-size: 12px;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        .capital-input {
+            background: var(--bg-dark);
+            border: 1px solid var(--card-border);
+            color: var(--accent-gold);
+            font-weight: 700;
+            font-size: 14px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            width: 110px;
+            text-align: right;
+            outline: none;
+        }
+
         .total-card {
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
             padding: 20px;
             margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .total-card .label {
@@ -76,10 +109,10 @@
         }
 
         .total-card .val {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 700;
             color: var(--green-profit);
-            margin-top: 8px;
+            margin-top: 4px;
         }
 
         .grid-2 {
@@ -103,7 +136,7 @@
         }
 
         .sub-card .val {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
         }
 
@@ -168,11 +201,25 @@
             border: 1px solid var(--card-border);
             border-radius: 10px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
             position: relative;
+            padding: 2px;
+        }
+
+        .day-cell .day-num {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .day-cell .day-pnl {
+            font-size: 8px;
+            font-weight: 700;
+            margin-top: 2px;
+            line-height: 1;
         }
 
         .day-cell.today {
@@ -338,6 +385,11 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        .fee-badge {
+            font-size: 10px;
+            color: var(--text-sub);
+        }
     </style>
 </head>
 <body>
@@ -349,9 +401,21 @@
 
     <!-- DASHBOARD PAGE -->
     <div id="dashboard-page" class="page active">
+        <!-- Capital Input Area -->
+        <div class="capital-container">
+            <label for="initial-capital">INITIAL CAPITAL ($)</label>
+            <input type="number" id="initial-capital" class="capital-input" value="100.00" step="10" onchange="updateCapital(this.value)">
+        </div>
+
         <div class="total-card">
-            <div class="label">TOTAL P&L</div>
-            <div class="val" id="total-pnl">$0.00</div>
+            <div>
+                <div class="label">TOTAL P&L (NET)</div>
+                <div class="val" id="total-pnl">$0.00</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="label">ACCOUNT BALANCE</div>
+                <div class="val" id="current-balance" style="font-size: 22px; color: var(--accent-gold);">$100.00</div>
+            </div>
         </div>
 
         <div class="grid-2">
@@ -384,9 +448,9 @@
     <!-- CALENDAR PAGE -->
     <div id="calendar-page" class="page">
         <div class="cal-header">
-            <button onclick="changeMonth(-1)" style="background:none; border:none; color:#fff;">&lt;</button>
+            <button onclick="changeMonth(-1)" style="background:none; border:none; color:#fff; font-size: 18px; padding: 5px;">&lt;</button>
             <div class="cal-title" id="cal-month-year">August 2026</div>
-            <button onclick="changeMonth(1)" style="background:none; border:none; color:#fff;">&gt;</button>
+            <button onclick="changeMonth(1)" style="background:none; border:none; color:#fff; font-size: 18px; padding: 5px;">&gt;</button>
         </div>
         <div class="month-total" id="month-total">Month total: $0.00</div>
 
@@ -430,7 +494,7 @@
                     <input type="text" id="pair" value="XAUUSD" required>
                 </div>
                 <div class="form-group">
-                    <label>P&L Amount ($)</label>
+                    <label>P&L Amount ($) [Fee -$0.08 Auto-Applied]</label>
                     <input type="number" step="0.01" id="pnl" placeholder="e.g. 50 or -30" required>
                 </div>
                 <div class="form-group">
@@ -443,10 +507,19 @@
     </div>
 
     <script>
+        const TRADE_FEE = 0.08;
         let trades = JSON.parse(localStorage.getItem('trading_journal_data')) || [];
+        let initialCapital = parseFloat(localStorage.getItem('trading_journal_capital')) || 100.00;
         let currentDate = new Date();
 
+        document.getElementById('initial-capital').value = initialCapital.toFixed(2);
         document.getElementById('trade-date').valueAsDate = new Date();
+
+        function updateCapital(val) {
+            initialCapital = parseFloat(val) || 0;
+            localStorage.setItem('trading_journal_capital', initialCapital);
+            updateDashboard();
+        }
 
         function switchPage(page) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -475,10 +548,11 @@
         document.getElementById('trade-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const pair = document.getElementById('pair').value;
-            const pnl = parseFloat(document.getElementById('pnl').value);
+            const rawPnl = parseFloat(document.getElementById('pnl').value);
+            const netPnl = rawPnl - TRADE_FEE;
             const date = document.getElementById('trade-date').value;
 
-            trades.push({ pair, pnl, date });
+            trades.push({ pair, rawPnl, pnl: netPnl, date });
             localStorage.setItem('trading_journal_data', JSON.stringify(trades));
 
             document.getElementById('trade-modal').classList.remove('open');
@@ -491,8 +565,8 @@
         function updateDashboard() {
             let totalPnl = 0;
             let wins = 0;
-            let best = 0;
-            let worst = 0;
+            let best = -Infinity;
+            let worst = Infinity;
 
             trades.forEach(t => {
                 totalPnl += t.pnl;
@@ -501,16 +575,23 @@
                 if(t.pnl < worst) worst = t.pnl;
             });
 
+            if (trades.length === 0) {
+                best = 0;
+                worst = 0;
+            }
+
             const winRate = trades.length ? Math.round((wins / trades.length) * 100) : 0;
+            const currentBalance = initialCapital + totalPnl;
 
             const pnlElem = document.getElementById('total-pnl');
-            pnlElem.innerText = `${totalPnl >= 0 ? '$' : '-$'}${Math.abs(totalPnl).toFixed(2)}`;
+            pnlElem.innerText = `${totalPnl >= 0 ? '+$' : '-$'}${Math.abs(totalPnl).toFixed(2)}`;
             pnlElem.style.color = totalPnl >= 0 ? 'var(--green-profit)' : 'var(--red-loss)';
 
+            document.getElementById('current-balance').innerText = `$${currentBalance.toFixed(2)}`;
             document.getElementById('win-rate').innerText = `${winRate}%`;
             document.getElementById('total-trades').innerText = trades.length;
             document.getElementById('best-trade').innerText = `$${best.toFixed(2)}`;
-            document.getElementById('worst-trade').innerText = `$${Math.abs(worst).toFixed(2)}`;
+            document.getElementById('worst-trade').innerText = `$${worst.toFixed(2)}`;
 
             const container = document.getElementById('trades-container');
             if(trades.length === 0) {
@@ -519,7 +600,7 @@
                 container.innerHTML = trades.slice().reverse().map(t => `
                     <div class="trade-item">
                         <div>
-                            <div style="font-weight:600">${t.pair}</div>
+                            <div style="font-weight:600">${t.pair} <span class="fee-badge">(-$0.08 fee)</span></div>
                             <div style="font-size:11px; color:var(--text-sub)">${t.date}</div>
                         </div>
                         <div style="font-weight:700; color: ${t.pnl >= 0 ? 'var(--green-profit)' : 'var(--red-loss)'}">
@@ -558,8 +639,11 @@
                 monthTotalPnl += dayPnl;
 
                 let statusClass = '';
+                let pnlText = '';
+
                 if(dayTrades.length > 0) {
                     statusClass = dayPnl >= 0 ? 'profit' : 'loss';
+                    pnlText = `<div class="day-pnl">${dayPnl >= 0 ? '+' : ''}${Math.round(dayPnl)}$</div>`;
                 }
 
                 const todayStr = new Date().toISOString().split('T')[0];
@@ -567,13 +651,14 @@
 
                 daysGrid.innerHTML += `
                     <div class="day-cell ${statusClass}">
-                        ${day}
+                        <span class="day-num">${day}</span>
+                        ${pnlText}
                     </div>
                 `;
             }
 
             const monthElem = document.getElementById('month-total');
-            monthElem.innerText = `Month total: ${monthTotalPnl >= 0 ? '$' : '-$'}${Math.abs(monthTotalPnl).toFixed(2)}`;
+            monthElem.innerText = `Month total: ${monthTotalPnl >= 0 ? '+$' : '-$'}${Math.abs(monthTotalPnl).toFixed(2)}`;
             monthElem.style.color = monthTotalPnl >= 0 ? 'var(--green-profit)' : 'var(--red-loss)';
         }
 
