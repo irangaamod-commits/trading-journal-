@@ -509,8 +509,12 @@
                     <input type="text" id="pair" value="XAUUSD" required>
                 </div>
                 <div class="form-group">
-                    <label>P&L Amount ($) [Fee -$0.08 Auto-Applied]</label>
+                    <label>P&L Amount ($)</label>
                     <input type="number" step="0.01" id="pnl" placeholder="e.g. 50 or -30" required>
+                </div>
+                <div class="form-group">
+                    <label>Commission / Fee ($)</label>
+                    <input type="number" step="0.01" id="fee" value="0.08" placeholder="e.g. 0.08" required>
                 </div>
                 <div class="form-group">
                     <label>Date</label>
@@ -522,7 +526,6 @@
     </div>
 
     <script>
-        const TRADE_FEE = 0.08;
         let trades = JSON.parse(localStorage.getItem('trading_journal_data')) || [];
         let initialCapital = parseFloat(localStorage.getItem('trading_journal_capital')) || 185.54;
         let currentDate = new Date();
@@ -564,10 +567,11 @@
             e.preventDefault();
             const pair = document.getElementById('pair').value;
             const rawPnl = parseFloat(document.getElementById('pnl').value);
-            const netPnl = rawPnl - TRADE_FEE;
+            const fee = parseFloat(document.getElementById('fee').value) || 0;
+            const netPnl = rawPnl - fee;
             const date = document.getElementById('trade-date').value;
 
-            trades.push({ id: Date.now(), pair, rawPnl, pnl: netPnl, date });
+            trades.push({ id: Date.now(), pair, rawPnl, fee, pnl: netPnl, date });
             localStorage.setItem('trading_journal_data', JSON.stringify(trades));
 
             document.getElementById('trade-modal').classList.remove('open');
@@ -622,10 +626,12 @@
             if(trades.length === 0) {
                 container.innerHTML = `<div class="empty-box">No trades yet. Tap + to log your first setup.</div>`;
             } else {
-                container.innerHTML = trades.slice().reverse().map(t => `
+                container.innerHTML = trades.slice().reverse().map(t => {
+                    const feeDisplay = t.fee !== undefined ? t.fee.toFixed(2) : '0.08';
+                    return `
                     <div class="trade-item">
                         <div>
-                            <div style="font-weight:600">${t.pair} <span class="fee-badge">(-$0.08 fee)</span></div>
+                            <div style="font-weight:600">${t.pair} <span class="fee-badge">(-$${feeDisplay} fee)</span></div>
                             <div style="font-size:11px; color:var(--text-sub)">${t.date}</div>
                         </div>
                         <div class="trade-right">
@@ -635,7 +641,7 @@
                             <button class="delete-btn" onclick="deleteTrade(${t.id})" title="Delete Trade">🗑️</button>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
             }
         }
 
