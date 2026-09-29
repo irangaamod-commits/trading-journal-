@@ -16,10 +16,10 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col relative">
 
     <!-- Top Navigation Bar -->
-    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center sticky top-0 z-50">
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center sticky top-0 z-40">
         <div class="flex items-center space-x-3">
             <i data-lucide="line-chart" class="w-7 h-7 text-sky-400"></i>
             <h1 class="text-xl font-bold tracking-wide">TRADING <span class="text-sky-400">JOURNAL</span></h1>
@@ -45,6 +45,31 @@
 
         <!-- TAB 1: DASHBOARD -->
         <section id="sec-dashboard" class="space-y-6">
+            
+            <!-- Account Capital Header Settings -->
+            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <i data-lucide="wallet" class="w-6 h-6 text-sky-400"></i>
+                    <div>
+                        <h2 class="text-sm font-medium text-slate-400">Starting Account Capital</h2>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="text-lg font-bold text-slate-100">$</span>
+                            <input type="number" id="initial-capital" value="10000" step="100" onchange="updateCapital()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-sm font-bold text-slate-100 w-36 focus:outline-none focus:border-sky-500">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex space-x-6">
+                    <div>
+                        <p class="text-xs text-slate-400">Current Balance</p>
+                        <p id="dash-current-balance" class="text-lg font-bold text-slate-100">$10,000.00</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Account Return (%)</p>
+                        <p id="dash-account-return" class="text-lg font-bold text-emerald-400">0.00%</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Summary Metric Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
@@ -70,7 +95,7 @@
                 <div class="lg:col-span-2 bg-slate-800 border border-slate-700 p-5 rounded-xl">
                     <h4 class="text-lg font-semibold mb-4 flex items-center space-x-2">
                         <i data-lucide="trending-up" class="w-5 h-5 text-sky-400"></i>
-                        <span>Cumulative Performance</span>
+                        <span>Account Growth Curve</span>
                     </h4>
                     <div class="h-64">
                         <canvas id="pnlChart"></canvas>
@@ -101,9 +126,7 @@
                 <div class="calendar-grid text-center font-semibold text-slate-400 text-sm mb-2">
                     <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                 </div>
-                <div id="calendar-days" class="calendar-grid">
-                    <!-- Dynamic Calendar Days Load Here -->
-                </div>
+                <div id="calendar-days" class="calendar-grid"></div>
             </div>
         </section>
 
@@ -111,7 +134,6 @@
         <section id="sec-journal" class="hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                <!-- Trade Entry Form -->
                 <div class="lg:col-span-1 bg-slate-800 border border-slate-700 p-6 rounded-xl">
                     <h3 class="text-lg font-bold mb-4 flex items-center space-x-2">
                         <i data-lucide="plus-circle" class="w-5 h-5 text-sky-400"></i>
@@ -159,7 +181,6 @@
                     </form>
                 </div>
 
-                <!-- Recent Trade Logs Table -->
                 <div class="lg:col-span-2 bg-slate-800 border border-slate-700 p-6 rounded-xl overflow-x-auto">
                     <h3 class="text-lg font-bold mb-4 flex items-center space-x-2">
                         <i data-lucide="list" class="w-5 h-5 text-sky-400"></i>
@@ -178,9 +199,7 @@
                                 <th class="p-3">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="trade-list-body" class="divide-y divide-slate-700 text-sm">
-                            <!-- Trade entries will render here -->
-                        </tbody>
+                        <tbody id="trade-list-body" class="divide-y divide-slate-700 text-sm"></tbody>
                     </table>
                 </div>
 
@@ -189,19 +208,45 @@
 
     </main>
 
+    <!-- IMAGE POPUP MODAL -->
+    <div id="imageModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4" onclick="closeImageModal()">
+        <div class="relative max-w-4xl w-full bg-slate-900 border border-slate-700 rounded-xl p-2 overflow-hidden" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center p-2 border-b border-slate-800">
+                <span class="text-sm font-semibold text-slate-300">Screenshot Preview</span>
+                <button onclick="closeImageModal()" class="text-slate-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="p-2 flex justify-center">
+                <img id="modalImg" src="" class="max-h-[80vh] w-auto rounded-lg object-contain" alt="Screenshot Preview">
+            </div>
+        </div>
+    </div>
+
     <!-- Script Application Logic -->
     <script>
         let trades = JSON.parse(localStorage.getItem('journal_trades')) || [];
+        let initialCapital = parseFloat(localStorage.getItem('journal_capital')) || 10000;
         let pnlChartInstance = null;
         let winrateChartInstance = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             lucide.createIcons();
             document.getElementById('trade-date').valueAsDate = new Date();
+            document.getElementById('initial-capital').value = initialCapital;
             renderDashboard();
             renderCalendar();
             renderJournalTable();
         });
+
+        function updateCapital() {
+            const val = parseFloat(document.getElementById('initial-capital').value);
+            if (!isNaN(val) && val >= 0) {
+                initialCapital = val;
+                localStorage.setItem('journal_capital', initialCapital);
+                renderDashboard();
+            }
+        }
 
         function switchTab(tabName) {
             ['dashboard', 'calendar', 'journal'].forEach(tab => {
@@ -214,6 +259,19 @@
             if (tabName === 'dashboard') renderDashboard();
             if (tabName === 'calendar') renderCalendar();
             if (tabName === 'journal') renderJournalTable();
+        }
+
+        function openImageModal(tradeId) {
+            const trade = trades.find(t => t.id === tradeId);
+            if (trade && trade.image) {
+                document.getElementById('modalImg').src = trade.image;
+                document.getElementById('imageModal').classList.remove('hidden');
+            }
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+            document.getElementById('modalImg').src = '';
         }
 
         function saveTrade(event) {
@@ -276,7 +334,7 @@
                         <td class="p-3 text-rose-400">$${t.comm.toFixed(2)}</td>
                         <td class="p-3 font-bold ${pnlClass}">$${netPnL.toFixed(2)}</td>
                         <td class="p-3">
-                            ${t.image ? `<a href="${t.image}" target="_blank" class="text-sky-400 hover:underline text-xs flex items-center space-x-1"><i data-lucide="image" class="w-3 h-3"></i><span>View</span></a>` : '<span class="text-slate-500 text-xs">None</span>'}
+                            ${t.image ? `<button onclick="openImageModal(${t.id})" class="text-sky-400 hover:underline text-xs flex items-center space-x-1 cursor-pointer"><i data-lucide="image" class="w-3 h-3"></i><span>View</span></button>` : '<span class="text-slate-500 text-xs">None</span>'}
                         </td>
                         <td class="p-3">
                             <button onclick="deleteTrade(${t.id})" class="text-rose-400 hover:text-rose-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -301,7 +359,15 @@
             });
 
             const netPnL = totalGrossPnL - totalComm;
+            const currentBalance = initialCapital + netPnL;
+            const accountReturn = initialCapital > 0 ? ((netPnL / initialCapital) * 100).toFixed(2) : 0;
             const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : 0;
+
+            document.getElementById('dash-current-balance').innerText = `$${currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            
+            const returnElem = document.getElementById('dash-account-return');
+            returnElem.innerText = `${accountReturn >= 0 ? '+' : ''}${accountReturn}%`;
+            returnElem.className = `text-lg font-bold ${accountReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
 
             document.getElementById('dash-net-pnl').innerText = `$${netPnL.toFixed(2)}`;
             document.getElementById('dash-net-pnl').className = `text-2xl font-bold mt-1 ${netPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
@@ -319,16 +385,15 @@
             if (pnlChartInstance) pnlChartInstance.destroy();
             if (winrateChartInstance) winrateChartInstance.destroy();
 
-            // Sorted trades cumulative calculation
             const sorted = [...trades].sort((a,b) => new Date(a.date) - new Date(b.date));
-            let runningPnL = 0;
-            const labels = [];
-            const dataPoints = [];
+            let runningBalance = initialCapital;
+            const labels = ['Initial'];
+            const dataPoints = [initialCapital];
 
             sorted.forEach(t => {
-                runningPnL += (t.pnl - t.comm);
+                runningBalance += (t.pnl - t.comm);
                 labels.push(t.date);
-                dataPoints.push(runningPnL);
+                dataPoints.push(runningBalance);
             });
 
             pnlChartInstance = new Chart(pnlCtx, {
@@ -336,7 +401,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Net Equity ($)',
+                        label: 'Account Balance ($)',
                         data: dataPoints,
                         borderColor: '#38bdf8',
                         backgroundColor: 'rgba(56, 189, 248, 0.1)',
@@ -371,7 +436,6 @@
             const month = now.getMonth();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            // Group net PnL by date
             const dailyPnL = {};
             trades.forEach(t => {
                 const net = t.pnl - t.comm;
